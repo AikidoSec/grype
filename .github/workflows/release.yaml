@@ -1,223 +1,27 @@
 name: "Release"
+
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: tag the latest commit on main with the given version (prefixed with v)
-        required: true
-      skip_quality_gate:
-        description: skip quality gate and proceed directly to releasing (for emergency releases)
-        type: boolean
-        default: false
+  release:
+    types: [published]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  quality-gate:
-    if: ${{ !inputs.skip_quality_gate }}
-    environment: release
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
-        with:
-          persist-credentials: false
-
-      - name: Check if running on main
-        if: github.ref != 'refs/heads/main'
-        # we are using the following flag when running `cosign blob-verify` for checksum signature verification:
-        #   --certificate-identity-regexp "https://github.com/anchore/.github/workflows/release.yaml@refs/heads/main"
-        # if we are not on the main branch, the signature will not be verifiable since the suffix requires the main branch
-        # at the time of when the OIDC token was issued on the Github Actions runner.
-        run: echo "This can only be run on the main branch otherwise releases produced will not be verifiable with cosign" && exit 1
-
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
-        with:
-          persist-credentials: false
-
-      - name: Check if pinned syft is a release version
-        run: .github/scripts/check-syft-version-is-release.sh
-
-      - name: Check if tag already exists
-        # note: this will fail if the tag already exists
-        run: |
-          [[ "$VERSION" == v* ]] || (echo "version '$VERSION' does not have a 'v' prefix" && exit 1)
-          git tag "$VERSION"
-        env:
-          VERSION: ${{ github.event.inputs.version }}
-
-      - name: Check static analysis results
-        uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be # v1.2.0
-        id: static-analysis
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # This check name is defined as the github action job name (in .github/workflows/testing.yaml)
-          checkName: "Static analysis"
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Check unit test results
-        uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be # v1.2.0
-        id: unit
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # This check name is defined as the github action job name (in .github/workflows/testing.yaml)
-          checkName: "Unit tests"
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Check integration test results
-        uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be # v1.2.0
-        id: integration
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # This check name is defined as the github action job name (in .github/workflows/testing.yaml)
-          checkName: "Integration tests"
-          timeoutSeconds: 1200 # 20 minutes, it sometimes takes that long
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Check integration test results
-        uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be # v1.2.0
-        id: quality_tests
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # This check name is defined as the github action job name (in .github/workflows/testing.yaml)
-          checkName: "Quality tests"
-          timeoutSeconds: 1200 # 20 minutes, it sometimes takes that long
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Check acceptance test results (linux)
-        uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be # v1.2.0
-        id: acceptance-linux
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # This check name is defined as the github action job name (in .github/workflows/testing.yaml)
-          checkName: "Acceptance tests (Linux)"
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Check acceptance test results (mac)
-        uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be # v1.2.0
-        id: acceptance-mac
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # This check name is defined as the github action job name (in .github/workflows/testing.yaml)
-          checkName: "Acceptance tests (Mac)"
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Check cli test results (linux)
-        uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be # v1.2.0
-        id: cli-linux
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # This check name is defined as the github action job name (in .github/workflows/testing.yaml)
-          checkName: "CLI tests (Linux)"
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Quality gate
-        if: steps.static-analysis.outputs.conclusion != 'success' || steps.unit.outputs.conclusion != 'success' || steps.integration.outputs.conclusion != 'success' || steps.quality_tests.outputs.conclusion != 'success' || steps.cli-linux.outputs.conclusion != 'success' || steps.acceptance-linux.outputs.conclusion != 'success' || steps.acceptance-mac.outputs.conclusion != 'success'
-        env:
-          STATIC_ANALYSIS_STATUS: ${{ steps.static-analysis.conclusion }}
-          UNIT_TEST_STATUS: ${{ steps.unit.outputs.conclusion }}
-          INTEGRATION_TEST_STATUS: ${{ steps.integration.outputs.conclusion }}
-          QUALITY_TEST_STATUS: ${{ steps.quality_tests.outputs.conclusion }}
-          ACCEPTANCE_LINUX_STATUS: ${{ steps.acceptance-linux.outputs.conclusion }}
-          ACCEPTANCE_MAC_STATUS: ${{ steps.acceptance-mac.outputs.conclusion }}
-          CLI_LINUX_STATUS: ${{ steps.cli-linux.outputs.conclusion }}
-        run: |
-          echo "Static Analysis Status: $STATIC_ANALYSIS_STATUS"
-          echo "Unit Test Status: $UNIT_TEST_STATUS"
-          echo "Integration Test Status: $INTEGRATION_TEST_STATUS"
-          echo "Quality Test Status: $QUALITY_TEST_STATUS"
-          echo "Acceptance Test (Linux) Status: $ACCEPTANCE_LINUX_STATUS"
-          echo "Acceptance Test (Mac) Status: $ACCEPTANCE_MAC_STATUS"
-          echo "CLI Test (Linux) Status: $CLI_LINUX_STATUS"
-          false
-
-  # only release core assets within the "release" job. Any other assets not already under the purview of the
-  # goreleaser configuration should be added as separate jobs to allow for debugging separately from the release workflow
-  # as well as not accidentally be re-run as a step multiple times (as could be done within the release workflow) as
-  # not all actions are guaranteed to be idempotent.
   release:
-    needs: [quality-gate]
-    if: ${{ always() && (needs.quality-gate.result == 'success' || inputs.skip_quality_gate) }}
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      packages: write
-      id-token: write
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: true
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
-        with:
-          # use the same cache we used for building snapshots
-          build-cache-key-prefix: "snapshot"
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef  #v3.6.0
+      - name: Build and release
+        uses: goreleaser/goreleaser-action@v6
         with:
-          username: ${{ secrets.ANCHOREOSSWRITE_DH_USERNAME }}
-          password: ${{ secrets.ANCHOREOSSWRITE_DH_PAT }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef  #v3.6.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Tag release
-        run: |
-          git config user.name "anchoreci"
-          git config user.email "anchoreci@users.noreply.github.com"
-          git tag -a "$VERSION" -m "Release $VERSION"
-          git push origin --tags
+          version: latest
+          args: release --clean --skip=docker,sign,sbom,announce,homebrew
         env:
-          VERSION: ${{ github.event.inputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & publish release artifacts
-        run: make ci-release
-        env:
-          # for mac signing and notarization...
-          QUILL_SIGN_P12: ${{ secrets.ANCHORE_APPLE_DEVELOPER_ID_CERT_CHAIN }}
-          QUILL_SIGN_PASSWORD: ${{ secrets.ANCHORE_APPLE_DEVELOPER_ID_CERT_PASS }}
-          QUILL_NOTARY_ISSUER: ${{ secrets.APPLE_NOTARY_ISSUER }}
-          QUILL_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
-          QUILL_NOTARY_KEY: ${{ secrets.APPLE_NOTARY_KEY }}
-          # for creating the release (requires write access to packages and content)
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # for updating brew formula in anchore/homebrew-syft
-          GITHUB_BREW_TOKEN: ${{ secrets.ANCHOREOPS_GITHUB_OSS_WRITE_TOKEN }}
-
-      - uses: anchore/sbom-action@fbfd9c6c189226748411491745178e0c2017392d # v0.20.10
-        continue-on-error: true
-        with:
-          artifact-name: sbom.spdx.json
-
-      - uses: 8398a7/action-slack@77eaa4f1c608a7d68b38af4e3f739dcd8cba273e # v3.19.0
-        continue-on-error: true
-        with:
-          status: ${{ job.status }}
-          fields: repo,workflow,action,eventName
-          text: "A new Grype release has been published: https://github.com/anchore/grype/releases/tag/${{ github.event.inputs.version }}"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_TOOLBOX_WEBHOOK_URL }}
-        if: ${{ success() }}
-
-  release-install-script:
-    needs: [release]
-    if: ${{ needs.release.result == 'success' }}
-    uses: "anchore/workflows/.github/workflows/release-install-script.yaml@main"
-    with:
-      tag: ${{ github.event.inputs.version }}
-    secrets:
-      # needed for r2...
-      R2_INSTALL_ACCESS_KEY_ID: ${{ secrets.OSS_R2_INSTALL_ACCESS_KEY_ID }}
-      R2_INSTALL_SECRET_ACCESS_KEY: ${{ secrets.OSS_R2_INSTALL_SECRET_ACCESS_KEY }}
-      R2_ENDPOINT: ${{ secrets.TOOLBOX_CLOUDFLARE_R2_ENDPOINT }}
-      # needed for s3...
-      S3_INSTALL_AWS_ACCESS_KEY_ID: ${{ secrets.TOOLBOX_AWS_ACCESS_KEY_ID }}
-      S3_INSTALL_AWS_SECRET_ACCESS_KEY: ${{ secrets.TOOLBOX_AWS_SECRET_ACCESS_KEY }}
