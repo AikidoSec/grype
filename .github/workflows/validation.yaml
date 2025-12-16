@@ -1,0 +1,56 @@
+name: "Validations"
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  static-analysis:
+    name: "Static analysis"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
+      - name: Run static analysis
+        run: make static-analysis
+
+  unit-test:
+    name: "Unit tests"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
+      - name: Run unit tests
+        run: make unit
+
+  integration-test:
+    name: "Integration tests"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
+      - name: Restore integration test cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/test/integration/test-fixtures/cache
+          key: ${{ runner.os }}-integration-test-cache-${{ hashFiles('test/integration/test-fixtures/cache.fingerprint') }}
+
+      - name: Run integration tests
+        run: make integration
