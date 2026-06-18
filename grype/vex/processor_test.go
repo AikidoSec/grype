@@ -213,6 +213,29 @@ func TestProcessor_ApplyVEX(t *testing.T) {
 			}},
 		},
 		{
+			name: "cyclonedx-demo1 - ignore by not_affected status",
+			options: ProcessorOptions{
+				Documents: []string{
+					"testdata/vex-docs/cdx-demo1.json",
+				},
+				IgnoreRules: []match.IgnoreRule{{
+					VexStatus: string(status.NotAffected),
+				}},
+			},
+			args: args{
+				pkgContext: pkgContext,
+				matches:    getSubject(),
+			},
+			wantMatches: matchesRef(libCryptoCVE_2023_1255, libCryptoCVE_2023_2975),
+			wantIgnoredMatches: []match.IgnoredMatch{{
+				Match: libCryptoCVE_2023_3817,
+				AppliedIgnoreRules: []match.IgnoreRule{{
+					Namespace: "vex",
+					VexStatus: string(status.NotAffected),
+				}},
+			}},
+		},
+		{
 			name: "openvex-demo1 - ignore by fixed status and CVE", // no real difference from the first test other than the AppliedIgnoreRules
 			options: ProcessorOptions{
 				Documents: []string{

@@ -1,0 +1,21 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:11111111-1111-1111-1111-111111111111",
+  "version": 1,
+  "vulnerabilities": [
+    {
+      "id": "CVE-2023-3817",
+      "analysis": {
+        "state": "not_affected",
+        "justification": "code_not_reachable",
+        "detail": "The vulnerable code path is not reachable in this product."
+      },
+      "affects": [
+        {
+          "ref": "pkg:apk/alpine/libcrypto3@3.0.8-r3?arch=x86_64&upstream=openssl&distro=alpine-3.17.3"
+        }
+      ]
+    }
+  ]
+}

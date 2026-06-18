@@ -19,6 +19,7 @@ import (
 	"github.com/anchore/syft/syft"
 	"github.com/anchore/syft/syft/cataloging"
 	"github.com/anchore/syft/syft/pkg/cataloger/binary"
+	"github.com/anchore/syft/syft/source"
 )
 
 func Test_getProviderConfig(t *testing.T) {
@@ -185,6 +186,59 @@ func Test_applyVexRules(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedIgnoreRules, opts.Ignore)
+		})
+	}
+}
+
+func Test_embeddedVEXDocuments(t *testing.T) {
+	cdxPath := "../../../../grype/vex/testdata/vex-docs/cdx-demo1.json"
+	openVEXPath := "../../../../grype/vex/testdata/vex-docs/openvex-demo1.json"
+
+	tests := []struct {
+		name        string
+		vexDocs     []string
+		userInput   string
+		pkgContext  pkg.Context
+		wantVexDocs []string
+	}{
+		{
+			name:        "adds CycloneDX SBOM with embedded vulnerability data",
+			userInput:   "sbom:" + cdxPath,
+			wantVexDocs: []string{cdxPath},
+		},
+		{
+			name:        "does not add non-CycloneDX VEX document as embedded SBOM VEX",
+			userInput:   "sbom:" + openVEXPath,
+			wantVexDocs: nil,
+		},
+		{
+			name:        "does not duplicate explicitly provided VEX document",
+			vexDocs:     []string{cdxPath},
+			userInput:   "sbom:" + cdxPath,
+			wantVexDocs: []string{cdxPath},
+		},
+		{
+			name:        "does not mix embedded CycloneDX with explicit non-CycloneDX VEX document",
+			vexDocs:     []string{openVEXPath},
+			userInput:   "sbom:" + cdxPath,
+			wantVexDocs: []string{openVEXPath},
+		},
+		{
+			name:      "uses SBOM file metadata when provider captured the path",
+			userInput: "ignored",
+			pkgContext: pkg.Context{
+				Source: &source.Description{
+					Metadata: pkg.SBOMFileMetadata{Path: cdxPath},
+				},
+			},
+			wantVexDocs: []string{cdxPath},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := embeddedVEXDocuments(tt.vexDocs, tt.userInput, tt.pkgContext)
+			assert.Equal(t, tt.wantVexDocs, got)
 		})
 	}
 }

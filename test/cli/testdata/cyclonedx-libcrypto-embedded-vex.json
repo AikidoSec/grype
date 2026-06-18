@@ -1,0 +1,63 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:33333333-3333-3333-3333-333333333333",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "container",
+      "name": "embedded-vex-cli-fixture",
+      "version": "sha256:fixture"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:apk/alpine/libcrypto3@3.0.8-r3?arch=x86_64&upstream=openssl&distro=alpine-3.17.3",
+      "type": "library",
+      "name": "libcrypto3",
+      "version": "3.0.8-r3",
+      "purl": "pkg:apk/alpine/libcrypto3@3.0.8-r3?arch=x86_64&upstream=openssl&distro=alpine-3.17.3",
+      "properties": [
+        {
+          "name": "syft:package:type",
+          "value": "apk"
+        },
+        {
+          "name": "syft:package:foundBy",
+          "value": "apkdb-cataloger"
+        }
+      ]
+    },
+    {
+      "bom-ref": "alpine:3.17.3",
+      "type": "operating-system",
+      "name": "alpine",
+      "version": "3.17.3",
+      "properties": [
+        {
+          "name": "syft:distro:id",
+          "value": "alpine"
+        },
+        {
+          "name": "syft:distro:versionID",
+          "value": "3.17.3"
+        }
+      ]
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2023-3817",
+      "analysis": {
+        "state": "not_affected",
+        "justification": "code_not_reachable",
+        "detail": "CLI fixture: Grype should suppress this match from embedded CycloneDX VEX data."
+      },
+      "affects": [
+        {
+          "ref": "pkg:apk/alpine/libcrypto3@3.0.8-r3?arch=x86_64&upstream=openssl&distro=alpine-3.17.3"
+        }
+      ]
+    }
+  ]
+}

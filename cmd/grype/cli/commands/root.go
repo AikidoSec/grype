@@ -3,6 +3,8 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -29,6 +31,7 @@ import (
 	"github.com/anchore/grype/grype/presenter/models"
 	"github.com/anchore/grype/grype/version"
 	"github.com/anchore/grype/grype/vex"
+	"github.com/anchore/grype/grype/vex/cyclonedx"
 	vexStatus "github.com/anchore/grype/grype/vex/status"
 	"github.com/anchore/grype/grype/vulnerability"
 	"github.com/anchore/grype/internal"
@@ -202,6 +205,8 @@ func runGrype(app clio.Application, opts *options.Grype, userInput string) (errs
 
 	warnWhenDistroHintNeeded(packages, &pkgContext)
 
+	opts.VexDocuments = embeddedVEXDocuments(opts.VexDocuments, userInput, pkgContext)
+
 	if err = applyVexRules(opts); err != nil {
 		return fmt.Errorf("applying vex rules: %w", err)
 	}
@@ -256,6 +261,43 @@ func runGrype(app clio.Application, opts *options.Grype, userInput string) (errs
 	log.WithFields("time", time.Since(startTime)).Trace("wrote vulnerability report")
 
 	return errs
+}
+
+func embeddedVEXDocuments(vexDocuments []string, userInput string, pkgContext pkg.Context) []string {
+	path := sbomDocumentPath(userInput, pkgContext)
+	if path == "" || slices.Contains(vexDocuments, path) || hasNonCycloneDXVEXDocument(vexDocuments) || !cyclonedx.HasVulnerabilityData(path) {
+		return vexDocuments
+	}
+	return append(vexDocuments, path)
+}
+
+func hasNonCycloneDXVEXDocument(vexDocuments []string) bool {
+	for _, document := range vexDocuments {
+		if !cyclonedx.IsCycloneDX(document) {
+			return true
+		}
+	}
+	return false
+}
+
+func sbomDocumentPath(userInput string, pkgContext pkg.Context) string {
+	if pkgContext.Source != nil {
+		if metadata, ok := pkgContext.Source.Metadata.(pkg.SBOMFileMetadata); ok {
+			return metadata.Path
+		}
+	}
+
+	if strings.HasPrefix(userInput, "sbom:") {
+		return strings.TrimPrefix(userInput, "sbom:")
+	}
+
+	if userInput == "" || strings.Contains(userInput, ":") {
+		return ""
+	}
+	if _, err := os.Stat(userInput); err != nil {
+		return ""
+	}
+	return userInput
 }
 
 func warnWhenDistroHintNeeded(pkgs []pkg.Package, context *pkg.Context) {
