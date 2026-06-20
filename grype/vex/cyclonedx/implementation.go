@@ -167,7 +167,7 @@ func findMatchingVulnerability(boms []*cdx.BOM, m match.Match) *cdx.Vulnerabilit
 		}
 		for i := range *bom.Vulnerabilities {
 			vuln := &(*bom.Vulnerabilities)[i]
-			if vuln.ID == m.Vulnerability.ID && (vulnerabilityAffectsPackage(bom, vuln, m.Package.PURL) || vulnerabilityAffectsStdlibSubcomponent(bom, vuln, m)) {
+			if vuln.ID == m.Vulnerability.ID && (vulnerabilityAffectsPackage(bom, vuln, m.Package.PURL) || vulnerabilityAffectsSubcomponent(bom, vuln, m)) {
 				return vuln
 			}
 		}
@@ -199,8 +199,8 @@ func componentPURLForRef(bom *cdx.BOM, ref string) string {
 	return ""
 }
 
-func vulnerabilityAffectsStdlibSubcomponent(bom *cdx.BOM, vuln *cdx.Vulnerability, m match.Match) bool {
-	if !isStdlibPackage(m.Package) || vuln.Affects == nil || len(*vuln.Affects) == 0 {
+func vulnerabilityAffectsSubcomponent(bom *cdx.BOM, vuln *cdx.Vulnerability, m match.Match) bool {
+	if !isGoPackage(m.Package) || vuln.Affects == nil || len(*vuln.Affects) == 0 {
 		return false
 	}
 
@@ -210,15 +210,15 @@ func vulnerabilityAffectsStdlibSubcomponent(bom *cdx.BOM, vuln *cdx.Vulnerabilit
 	}
 
 	for _, affected := range *vuln.Affects {
-		if !isStdlibSubcomponentRef(bom, affected.Ref) || !anyParentDependsOnRef(bom, parentRefs, affected.Ref) {
+		if !componentIsSubcomponentOfPackage(bom, affected.Ref, m.Package.PURL) || !anyParentDependsOnRef(bom, parentRefs, affected.Ref) {
 			return false
 		}
 	}
 	return true
 }
 
-func isStdlibPackage(p pkg.Package) bool {
-	return p.Name == "stdlib" || strings.HasPrefix(p.PURL, "pkg:golang/stdlib@") || strings.HasPrefix(p.PURL, "pkg:golang/std@")
+func isGoPackage(p pkg.Package) bool {
+	return strings.HasPrefix(p.PURL, "pkg:golang/")
 }
 
 func componentRefsForPURL(bom *cdx.BOM, purl string) []string {
@@ -240,17 +240,20 @@ func componentRefsForPURL(bom *cdx.BOM, purl string) []string {
 	return refs
 }
 
-func isStdlibSubcomponentRef(bom *cdx.BOM, ref string) bool {
-	if strings.HasPrefix(ref, "pkg:golang/stdlib/") || strings.HasPrefix(ref, "pkg:golang/std/") {
-		return true
-	}
-
-	if bom.Components == nil {
+func componentIsSubcomponentOfPackage(bom *cdx.BOM, ref string, parentPURL string) bool {
+	if ref == "" || parentPURL == "" {
 		return false
 	}
-	for _, component := range *bom.Components {
-		if component.BOMRef == ref {
-			return strings.HasPrefix(component.PackageURL, "pkg:golang/stdlib/") || strings.HasPrefix(component.PackageURL, "pkg:golang/std/")
+	for _, candidate := range []string{ref, componentPURLForRef(bom, ref)} {
+		if candidate == "" || candidate == parentPURL {
+			continue
+		}
+		if strings.HasPrefix(candidate, parentPURL+"#") {
+			return true
+		}
+		parentName := strings.Split(parentPURL, "@")[0]
+		if strings.HasPrefix(candidate, parentName+"/") {
+			return true
 		}
 	}
 	return false
