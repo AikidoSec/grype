@@ -812,8 +812,12 @@ func TestMatchByImage(t *testing.T) {
 		vexStatus    vexStatus.Status
 		vexDocuments []string
 	}{
-		"csaf-affected":               {vexStatus.Affected, []string{"test-fixtures/vex/csaf/affected.csaf.json"}},
-		"csaf-under_investigation":    {vexStatus.UnderInvestigation, []string{"test-fixtures/vex/csaf/under_investigation.csaf.json"}},
+		"csaf-affected":            {vexStatus.Affected, []string{"test-fixtures/vex/csaf/affected.csaf.json"}},
+		"csaf-under_investigation": {vexStatus.UnderInvestigation, []string{"test-fixtures/vex/csaf/under_investigation.csaf.json"}},
+		"cyclonedx-affected":       {vexStatus.Affected, []string{"test-fixtures/vex/cyclonedx/affected.cdx.json"}},
+		"cyclonedx-under_investigation": {vexStatus.UnderInvestigation, []string{
+			"test-fixtures/vex/cyclonedx/under_investigation.cdx.json",
+		}},
 		"openvex-affected":            {vexStatus.Affected, []string{"test-fixtures/vex/openvex/affected.openvex.json"}},
 		"openvex-under_investigation": {vexStatus.UnderInvestigation, []string{"test-fixtures/vex/openvex/under_investigation.openvex.json"}},
 	} {

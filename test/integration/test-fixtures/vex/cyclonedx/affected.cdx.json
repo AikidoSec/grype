@@ -1,0 +1,19 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:22222222-2222-2222-2222-222222222222",
+  "version": 1,
+  "vulnerabilities": [
+    {
+      "id": "CVE-2024-0000",
+      "analysis": {
+        "state": "exploitable"
+      },
+      "affects": [
+        {
+          "ref": "pkg:apk/alpine/libvncserver@0.9.9?arch=x86_64&distro=alpine-3.12.0"
+        }
+      ]
+    }
+  ]
+}
