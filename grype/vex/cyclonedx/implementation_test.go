@@ -116,6 +116,53 @@ func TestFilterMatches_GoModuleSubcomponentVEX(t *testing.T) {
 	}
 }
 
+func TestFilterMatches_SubcomponentVEXWithUnrelatedAffectsEntry(t *testing.T) {
+	const (
+		stdlibPURL   = "pkg:golang/stdlib@go1.23.4"
+		httpPURL     = "pkg:golang/stdlib/net/http@go1.23.4"
+		unrelatedRef = "pkg:golang/github.com/other/lib@v1.2.3"
+		vulnID       = "GO-2024-9999"
+	)
+
+	stdlibMatch := match.Match{
+		Vulnerability: vulnerability.Vulnerability{
+			Reference: vulnerability.Reference{ID: vulnID},
+		},
+		Package: pkg.Package{
+			Name: "stdlib",
+			PURL: stdlibPURL,
+		},
+	}
+
+	// The CVE's Affects array lists an unrelated component first, then the affected stdlib
+	// subcomponent. Suppression must still apply even though the first entry does not belong
+	// to this package.
+	bom := &cdx.BOM{
+		BOMFormat: cdx.BOMFormat,
+		Components: &[]cdx.Component{
+			{BOMRef: stdlibPURL, Type: cdx.ComponentTypeLibrary, Name: "stdlib", Version: "go1.23.4", PackageURL: stdlibPURL},
+			{BOMRef: httpPURL, Type: cdx.ComponentTypeLibrary, Name: "stdlib/net/http", Version: "go1.23.4", PackageURL: httpPURL},
+		},
+		Dependencies: &[]cdx.Dependency{{Ref: stdlibPURL, Dependencies: &[]string{httpPURL}}},
+		Vulnerabilities: &[]cdx.Vulnerability{
+			{
+				ID: vulnID,
+				Analysis: &cdx.VulnerabilityAnalysis{
+					State:         cdx.IASNotAffected,
+					Justification: cdx.IAJCodeNotReachable,
+				},
+				Affects: &[]cdx.Affects{{Ref: unrelatedRef}, {Ref: httpPURL}},
+			},
+		},
+	}
+
+	matches := match.NewMatches(stdlibMatch)
+	remaining, ignored, err := New().FilterMatches([]*cdx.BOM{bom}, nil, nil, &matches, nil)
+	require.NoError(t, err)
+	require.Empty(t, remaining.Sorted())
+	require.Len(t, ignored, 1)
+}
+
 func TestFilterMatches_AffectsComponentRefWithPackageURL(t *testing.T) {
 	const (
 		componentRef = "pkg:golang/golang.org/x/crypto@v0.49.0?package-id=abc"

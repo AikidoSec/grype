@@ -60,12 +60,15 @@ func vulnerabilityAffectsSubcomponent(bom *cdx.BOM, vuln *cdx.Vulnerability, m m
 		return false
 	}
 
+	// A vulnerability's Affects array lists every component the CVE touches across the whole
+	// BOM, so entries for unrelated packages are expected. The vuln affects this package when
+	// at least one affected ref is a subcomponent of it that a parent actually depends on.
 	for _, affected := range *vuln.Affects {
-		if !componentIsSubcomponentOfPackage(bom, affected.Ref, m.Package.PURL) || !anyParentDependsOnRef(bom, parentRefs, affected.Ref) {
-			return false
+		if componentIsSubcomponentOfPackage(bom, affected.Ref, m.Package.PURL) && anyParentDependsOnRef(bom, parentRefs, affected.Ref) {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func isGoPackage(p pkg.Package) bool {
