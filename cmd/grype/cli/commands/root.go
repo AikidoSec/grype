@@ -365,7 +365,8 @@ func getProviderConfig(opts *options.Grype) pkg.ProviderConfig {
 			Sources:                opts.From,
 		},
 		SynthesisConfig: pkg.SynthesisConfig{
-			GenerateMissingCPEs: opts.GenerateMissingCPEs,
+			GenerateMissingCPEs:            opts.GenerateMissingCPEs,
+			AdditionalComprehensiveDistros: opts.AdditionalComprehensiveDistros,
 			Distro: pkg.DistroConfig{
 				Override:    applyDistroHint(opts.Distro),
 				FixChannels: getFixChannels(opts.FixChannel),

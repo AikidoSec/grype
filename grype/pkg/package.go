@@ -124,7 +124,7 @@ func (p Package) String() string {
 	return fmt.Sprintf("Pkg(type=%s, name=%s, version=%s%s%s)", p.Type, p.Name, p.Version, u, d)
 }
 
-func removePackagesByOverlap(catalog *syftPkg.Collection, relationships []artifact.Relationship, distro *distro.Distro) *syftPkg.Collection {
+func removePackagesByOverlap(catalog *syftPkg.Collection, relationships []artifact.Relationship, distro *distro.Distro, additionalComprehensiveDistros ...string) *syftPkg.Collection {
 	byOverlap := map[artifact.ID]artifact.Relationship{}
 	for _, r := range relationships {
 		if r.Type == artifact.OwnershipByFileOverlapRelationship {
@@ -133,7 +133,7 @@ func removePackagesByOverlap(catalog *syftPkg.Collection, relationships []artifa
 	}
 
 	out := syftPkg.NewCollection()
-	comprehensiveDistroFeed := distroFeedIsComprehensive(distro)
+	comprehensiveDistroFeed := distroFeedIsComprehensive(distro, additionalComprehensiveDistros)
 	for p := range catalog.Enumerate() {
 		r, ok := byOverlap[p.ID()]
 		if ok {
@@ -177,11 +177,16 @@ func excludePackage(comprehensiveDistroFeed bool, p syftPkg.Package, parent syft
 // distroFeedIsComprehensive returns true if the distro feed
 // is comprehensive enough that we can drop packages owned by distro packages
 // before matching.
-func distroFeedIsComprehensive(dst *distro.Distro) bool {
+func distroFeedIsComprehensive(dst *distro.Distro, additionalComprehensiveDistros []string) bool {
 	// TODO: this mechanism should be re-examined once https://github.com/anchore/grype/issues/1426
 	// is addressed
 	if dst == nil {
 		return false
+	}
+	for _, d := range additionalComprehensiveDistros {
+		if strings.EqualFold(d, dst.Name()) || strings.EqualFold(d, string(dst.Type)) {
+			return true
+		}
 	}
 	if dst.Type == distro.AmazonLinux {
 		// AmazonLinux shows "like rhel" but is not an rhel clone
