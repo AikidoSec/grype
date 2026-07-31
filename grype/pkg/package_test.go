@@ -1033,9 +1033,10 @@ func intRef(i int) *int {
 
 func Test_RemovePackagesByOverlap(t *testing.T) {
 	tests := []struct {
-		name             string
-		sbom             *sbom.SBOM
-		expectedPackages []string
+		name                           string
+		sbom                           *sbom.SBOM
+		additionalComprehensiveDistros []string
+		expectedPackages               []string
 	}{
 		{
 			name: "includes all packages without overlap",
@@ -1108,6 +1109,30 @@ func Test_RemovePackagesByOverlap(t *testing.T) {
 			expectedPackages: []string{"rpm:python3-rpm@4.14.3-26.el8", "python:rpm@4.14.3"},
 		},
 		{
+			name: "amzn linux removes overlapping packages when configured as an additional comprehensive distro",
+			sbom: withLinuxRelease(catalogWithOverlaps(
+				[]string{"rpm:python3-rpm@4.14.3-26.el8", "python:rpm@4.14.3"},
+				[]string{"rpm:python3-rpm@4.14.3-26.el8 -> python:rpm@4.14.3"}), "amzn"),
+			additionalComprehensiveDistros: []string{"amazonlinux"},
+			expectedPackages:               []string{"rpm:python3-rpm@4.14.3-26.el8"},
+		},
+		{
+			name: "additional comprehensive distro does not remove version-mismatched packages (vendored deps stay)",
+			sbom: withLinuxRelease(catalogWithOverlaps(
+				[]string{"rpm:some-agent@7.81.2-1", "python:urllib3@2.7.0"},
+				[]string{"rpm:some-agent@7.81.2-1 -> python:urllib3@2.7.0"}), "amzn"),
+			additionalComprehensiveDistros: []string{"amazonlinux"},
+			expectedPackages:               []string{"rpm:some-agent@7.81.2-1", "python:urllib3@2.7.0"},
+		},
+		{
+			name: "additional comprehensive distro override for unrelated distro has no effect",
+			sbom: withLinuxRelease(catalogWithOverlaps(
+				[]string{"rpm:python3-rpm@4.14.3-26.el8", "python:rpm@4.14.3"},
+				[]string{"rpm:python3-rpm@4.14.3-26.el8 -> python:rpm@4.14.3"}), "amzn"),
+			additionalComprehensiveDistros: []string{"gentoo"},
+			expectedPackages:               []string{"rpm:python3-rpm@4.14.3-26.el8", "python:rpm@4.14.3"},
+		},
+		{
 			name: "remove overlapping package when parent version is prefix of child version",
 			sbom: withLinuxRelease(catalogWithOverlaps(
 				[]string{"rpm:kernel-rt-core@5.14.0-503.40.1.el9_5", "linux-kernel:linux-kernel@5.14.0-503.40.1.el9_5.x86_64+rt"},
@@ -1132,7 +1157,7 @@ func Test_RemovePackagesByOverlap(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			d := distro.FromRelease(test.sbom.Artifacts.LinuxDistribution, distro.DefaultFixChannels())
-			catalog := removePackagesByOverlap(test.sbom.Artifacts.Packages, test.sbom.Relationships, d)
+			catalog := removePackagesByOverlap(test.sbom.Artifacts.Packages, test.sbom.Relationships, d, test.additionalComprehensiveDistros...)
 			pkgs := FromCollection(catalog, SynthesisConfig{})
 			var pkgNames []string
 			for _, p := range pkgs {

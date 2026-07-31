@@ -21,8 +21,9 @@ type SyftProviderConfig struct {
 }
 
 type SynthesisConfig struct {
-	GenerateMissingCPEs bool
-	Distro              DistroConfig
+	GenerateMissingCPEs            bool
+	Distro                         DistroConfig
+	AdditionalComprehensiveDistros []string
 }
 
 type DistroConfig struct {

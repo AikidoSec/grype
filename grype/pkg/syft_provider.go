@@ -35,7 +35,7 @@ func syftProvider(userInput string, config ProviderConfig, applyChannel func(*di
 
 	d := distroFromSBOM(s, config, applyChannel)
 
-	pkgCatalog := removePackagesByOverlap(s.Artifacts.Packages, s.Relationships, d)
+	pkgCatalog := removePackagesByOverlap(s.Artifacts.Packages, s.Relationships, d, config.AdditionalComprehensiveDistros...)
 
 	packages := FromCollection(pkgCatalog, config.SynthesisConfig)
 	pkgCtx := Context{

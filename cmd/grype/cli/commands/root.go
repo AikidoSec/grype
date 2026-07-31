@@ -362,7 +362,8 @@ func getProviderConfig(opts *options.Grype) pkg.ProviderConfig {
 			DefaultImagePullSource: opts.DefaultImagePullSource,
 		},
 		SynthesisConfig: pkg.SynthesisConfig{
-			GenerateMissingCPEs: opts.GenerateMissingCPEs,
+			GenerateMissingCPEs:            opts.GenerateMissingCPEs,
+			AdditionalComprehensiveDistros: opts.AdditionalComprehensiveDistros,
 			Distro: pkg.DistroConfig{
 				Override:    applyDistroHint(opts.Distro),
 				FixChannels: getFixChannels(opts.FixChannel),
