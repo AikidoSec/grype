@@ -484,6 +484,34 @@ apk-tools  2.10.6-r0  2.10.7-r0  CVE-2021-36159  Critical
 
 If you want Grype to only report vulnerabilities **that do not have a confirmed fix**, you can use the `--only-notfixed` flag. Alternatively, you can use the `--ignore-states` flag to filter results for vulnerabilities with specific states such as `wont-fix` (see `--help` for a list of valid fix states). These flags automatically add [ignore rules](#specifying-matches-to-ignore) into Grype's configuration, such that vulnerabilities which are fixed, or will not be fixed, will be ignored.
 
+### Clearing matches with a content hash feed
+
+Prebuilt binaries (minio, node, and similar) are matched by CPE and version string. When such a binary is patched in place, the version string stays the same and only the file bytes change, so Grype keeps reporting a vulnerability that is already fixed. The `digest-feed` option lets you supply a list of file content hashes and the CVEs each hash is patched against, so those matches can be cleared by hash instead of by version:
+
+```shell
+grype sbom:image.json --digest-feed https://api.root.io/external/binary_feed
+```
+
+The source may be an `http`/`https` URL or a local file path, and points at a JSON array of:
+
+```json
+[
+  {
+    "sha256": "64e8ddd0eb8848d9062ea66a5fca43f86a4c0125e20808c4284d21db9c125c46",
+    "name": "minio",
+    "version": "RELEASE.2025-09-07T16-13-09Z",
+    "arch": "amd64",
+    "cve_ids": ["CVE-2025-62506"]
+  }
+]
+```
+
+A match is cleared when the package is a binary, one of its file locations has a sha256 in the feed, and the feed lists the match's vulnerability for that hash. Cleared matches are treated as [ignored](#specifying-matches-to-ignore): they move to `ignoredMatches` with the clearing hash as the reason, and they do not affect `--fail-on`.
+
+Downloaded feeds are cached next to the vulnerability database and reused for `digest-feed.ttl` (default one hour). If the feed cannot be fetched, Grype falls back to a stale cache, and otherwise logs a warning and scans without clearance rather than failing.
+
+This relies on file digests being present in the input, which is the case for Syft SBOMs containing a `files[]` section with sha256 digests. Scanning an image or directory directly does not catalog file digests, so the feed has no effect there.
+
 ## VEX Support
 
 Grype can use VEX (Vulnerability Exploitability Exchange) data to filter false
@@ -991,6 +1019,14 @@ dev:
   db:
     # show sql queries in trace logging (requires -vv) (env: GRYPE_DEV_DB_DEBUG)
     debug: false
+
+digest-feed:
+  # URL or file path of a feed listing file content hashes and the CVEs they are patched against,
+  # used to clear matches on binaries that were patched without a version bump (default is unset, which disables this) (env: GRYPE_DIGEST_FEED_SOURCE)
+  source: ''
+
+  # how long a downloaded digest feed is reused before being fetched again (env: GRYPE_DIGEST_FEED_TTL)
+  ttl: 1h0m0s
 
 # include a timestamp (env: GRYPE_TIMESTAMP)
 timestamp: true
