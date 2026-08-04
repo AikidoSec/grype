@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	fetchTimeout = 30 * time.Second
+	fetchTimeout = 10 * time.Second
 	maxFeedBytes = 64 << 20
 )
 
