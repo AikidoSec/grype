@@ -43,6 +43,7 @@ type Grype struct {
 	FixChannel                     FixChannels        `yaml:"fix-channel" json:"fix-channel" mapstructure:"fix-channel"`                                                                // the fix channels to apply to the distro when matching
 	Timestamp                      bool               `yaml:"timestamp" json:"timestamp" mapstructure:"timestamp"`
 	DatabaseCommand                `yaml:",inline" json:",inline" mapstructure:",squash"`
+  DropIgnoredMatches         bool               `yaml:"drop-ignored-matches" json:"drop-ignored-matches" mapstructure:"drop-ignored-matches"`
 }
 
 type developer struct {
@@ -142,6 +143,11 @@ func (o *Grype) AddFlags(flags clio.FlagSet) {
 		"show suppressed/ignored vulnerabilities in the output (only supported with table output format)",
 	)
 
+	flags.BoolVarP(&o.DropIgnoredMatches,
+		"drop-ignored-matches", "",
+		"omit supporessed/ignored vulnerabilities in the output (e.g. json, template)",
+	)
+
 	flags.StringArrayVarP(&o.Exclusions,
 		"exclude", "",
 		"exclude paths from being scanned using a glob expression",
@@ -211,6 +217,7 @@ VEX fields apply when Grype reads vex data:
 `)
 	descriptions.Add(&o.VexAdd, `VEX statuses to consider as ignored rules`)
 	descriptions.Add(&o.MatchUpstreamKernelHeaders, `match kernel-header packages with upstream kernel as kernel vulnerabilities`)
+	descriptions.Add(&o.DropIgnoredMatches, `omit supporessed/ignored vulnerabilities in the output (e.g. json, template)`)
 	descriptions.Add(&o.AdditionalComprehensiveDistros, `distros (by ID, e.g. "amazonlinux")`)
 }
 
