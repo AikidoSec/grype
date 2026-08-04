@@ -237,6 +237,9 @@ func runGrype(app clio.Application, opts *options.Grype, userInput string) (errs
 	log.WithFields("time", time.Since(startTime)).Info("found vulnerability matches")
 	startTime = time.Now()
 
+	// clear out the registry auth information to avoid including possibly sensitive information in the report
+	opts.Registry.Auth = nil
+
 	model, err := models.NewDocument(app.ID(), packages, pkgContext, *remainingMatches, ignoredMatches, vp, opts, dbInfo(status, vp), models.SortStrategy(opts.SortBy.Criteria), opts.Timestamp)
 	if err != nil {
 		return fmt.Errorf("failed to create document: %w", err)
@@ -360,9 +363,11 @@ func getProviderConfig(opts *options.Grype) pkg.ProviderConfig {
 			Platform:               opts.Platform,
 			Name:                   opts.Name,
 			DefaultImagePullSource: opts.DefaultImagePullSource,
+			Sources:                opts.From,
 		},
 		SynthesisConfig: pkg.SynthesisConfig{
-			GenerateMissingCPEs: opts.GenerateMissingCPEs,
+			GenerateMissingCPEs:            opts.GenerateMissingCPEs,
+			AdditionalComprehensiveDistros: opts.AdditionalComprehensiveDistros,
 			Distro: pkg.DistroConfig{
 				Override:    applyDistroHint(opts.Distro),
 				FixChannels: getFixChannels(opts.FixChannel),
@@ -402,7 +407,8 @@ func applyDistroHint(hint string) *distro.Distro {
 		return nil
 	}
 
-	return distro.NewFromNameVersion(stringutil.SplitOnFirstString(hint, ":", "@"))
+	name, version := distro.ParseDistroString(hint)
+	return distro.NewFromNameVersion(name, version)
 }
 
 func validateDBLoad(loadErr error, status *vulnerability.ProviderStatus) error {

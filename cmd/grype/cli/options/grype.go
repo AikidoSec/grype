@@ -2,6 +2,7 @@ package options
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/anchore/clio"
 	"github.com/anchore/grype/grype/match"
@@ -11,36 +12,38 @@ import (
 )
 
 type Grype struct {
-	Outputs                    []string           `yaml:"output" json:"output" mapstructure:"output"` // -o, <presenter>=<file> the Presenter hint string to use for report formatting and the output file
-	File                       string             `yaml:"file" json:"file" mapstructure:"file"`       // --file, the file to write report output to
-	Pretty                     bool               `yaml:"pretty" json:"pretty" mapstructure:"pretty"`
-	Distro                     string             `yaml:"distro" json:"distro" mapstructure:"distro"`                                           // --distro, specify a distro to explicitly use
-	GenerateMissingCPEs        bool               `yaml:"add-cpes-if-none" json:"add-cpes-if-none" mapstructure:"add-cpes-if-none"`             // --add-cpes-if-none, automatically generate CPEs if they are not present in import (e.g. from a 3rd party SPDX document)
-	OutputTemplateFile         string             `yaml:"output-template-file" json:"output-template-file" mapstructure:"output-template-file"` // -t, the template file to use for formatting the final report
-	CheckForAppUpdate          bool               `yaml:"check-for-app-update" json:"check-for-app-update" mapstructure:"check-for-app-update"` // whether to check for an application update on start up or not
-	OnlyFixed                  bool               `yaml:"only-fixed" json:"only-fixed" mapstructure:"only-fixed"`                               // only fail if detected vulns have a fix
-	OnlyNotFixed               bool               `yaml:"only-notfixed" json:"only-notfixed" mapstructure:"only-notfixed"`                      // only fail if detected vulns don't have a fix
-	IgnoreStates               string             `yaml:"ignore-states" json:"ignore-wontfix" mapstructure:"ignore-wontfix"`                    // ignore detections for vulnerabilities matching these comma-separated fix states
-	Platform                   string             `yaml:"platform" json:"platform" mapstructure:"platform"`                                     // --platform, override the target platform for a container image
-	Search                     search             `yaml:"search" json:"search" mapstructure:"search"`
-	Ignore                     []match.IgnoreRule `yaml:"ignore" json:"ignore" mapstructure:"ignore"`
-	Exclusions                 []string           `yaml:"exclude" json:"exclude" mapstructure:"exclude"`
-	ExternalSources            externalSources    `yaml:"external-sources" json:"externalSources" mapstructure:"external-sources"`
-	Match                      matchConfig        `yaml:"match" json:"match" mapstructure:"match"`
-	FailOn                     string             `yaml:"fail-on-severity" json:"fail-on-severity" mapstructure:"fail-on-severity"`
-	Registry                   registry           `yaml:"registry" json:"registry" mapstructure:"registry"`
-	ShowSuppressed             bool               `yaml:"show-suppressed" json:"show-suppressed" mapstructure:"show-suppressed"`
-	DropIgnoredMatches         bool               `yaml:"drop-ignored-matches" json:"drop-ignored-matches" mapstructure:"drop-ignored-matches"`
-	ByCVE                      bool               `yaml:"by-cve" json:"by-cve" mapstructure:"by-cve"` // --by-cve, indicates if the original match vulnerability IDs should be preserved or the CVE should be used instead
-	SortBy                     SortBy             `yaml:",inline" json:",inline" mapstructure:",squash"`
-	Name                       string             `yaml:"name" json:"name" mapstructure:"name"`
-	DefaultImagePullSource     string             `yaml:"default-image-pull-source" json:"default-image-pull-source" mapstructure:"default-image-pull-source"`
-	VexDocuments               []string           `yaml:"vex-documents" json:"vex-documents" mapstructure:"vex-documents"`
-	VexAdd                     []string           `yaml:"vex-add" json:"vex-add" mapstructure:"vex-add"`                                                                   // GRYPE_VEX_ADD
-	MatchUpstreamKernelHeaders bool               `yaml:"match-upstream-kernel-headers" json:"match-upstream-kernel-headers" mapstructure:"match-upstream-kernel-headers"` // Show matches on kernel-headers packages where the match is on kernel upstream instead of marking them as ignored, default=false
-	FixChannel                 FixChannels        `yaml:"fix-channel" json:"fix-channel" mapstructure:"fix-channel"`                                                       // the fix channels to apply to the distro when matching
-	Timestamp                  bool               `yaml:"timestamp" json:"timestamp" mapstructure:"timestamp"`
-	DatabaseCommand            `yaml:",inline" json:",inline" mapstructure:",squash"`
+	Outputs                        []string           `yaml:"output" json:"output" mapstructure:"output"` // -o, <presenter>=<file> the Presenter hint string to use for report formatting and the output file
+	File                           string             `yaml:"file" json:"file" mapstructure:"file"`       // --file, the file to write report output to
+	Pretty                         bool               `yaml:"pretty" json:"pretty" mapstructure:"pretty"`
+	Distro                         string             `yaml:"distro" json:"distro" mapstructure:"distro"`                                           // --distro, specify a distro to explicitly use
+	GenerateMissingCPEs            bool               `yaml:"add-cpes-if-none" json:"add-cpes-if-none" mapstructure:"add-cpes-if-none"`             // --add-cpes-if-none, automatically generate CPEs if they are not present in import (e.g. from a 3rd party SPDX document)
+	OutputTemplateFile             string             `yaml:"output-template-file" json:"output-template-file" mapstructure:"output-template-file"` // -t, the template file to use for formatting the final report
+	CheckForAppUpdate              bool               `yaml:"check-for-app-update" json:"check-for-app-update" mapstructure:"check-for-app-update"` // whether to check for an application update on start up or not
+	OnlyFixed                      bool               `yaml:"only-fixed" json:"only-fixed" mapstructure:"only-fixed"`                               // only fail if detected vulns have a fix
+	OnlyNotFixed                   bool               `yaml:"only-notfixed" json:"only-notfixed" mapstructure:"only-notfixed"`                      // only fail if detected vulns don't have a fix
+	IgnoreStates                   string             `yaml:"ignore-states" json:"ignore-wontfix" mapstructure:"ignore-wontfix"`                    // ignore detections for vulnerabilities matching these comma-separated fix states
+	Platform                       string             `yaml:"platform" json:"platform" mapstructure:"platform"`                                     // --platform, override the target platform for a container image
+	Search                         search             `yaml:"search" json:"search" mapstructure:"search"`
+	Ignore                         []match.IgnoreRule `yaml:"ignore" json:"ignore" mapstructure:"ignore"`
+	Exclusions                     []string           `yaml:"exclude" json:"exclude" mapstructure:"exclude"`
+	ExternalSources                externalSources    `yaml:"external-sources" json:"externalSources" mapstructure:"external-sources"`
+	Match                          matchConfig        `yaml:"match" json:"match" mapstructure:"match"`
+	FailOn                         string             `yaml:"fail-on-severity" json:"fail-on-severity" mapstructure:"fail-on-severity"`
+	Registry                       registry           `yaml:"registry" json:"registry" mapstructure:"registry"`
+	ShowSuppressed                 bool               `yaml:"show-suppressed" json:"show-suppressed" mapstructure:"show-suppressed"`
+	ByCVE                          bool               `yaml:"by-cve" json:"by-cve" mapstructure:"by-cve"` // --by-cve, indicates if the original match vulnerability IDs should be preserved or the CVE should be used instead
+	SortBy                         SortBy             `yaml:",inline" json:",inline" mapstructure:",squash"`
+	Name                           string             `yaml:"name" json:"name" mapstructure:"name"`
+	DefaultImagePullSource         string             `yaml:"default-image-pull-source" json:"default-image-pull-source" mapstructure:"default-image-pull-source"`
+	From                           []string           `yaml:"from" json:"from" mapstructure:"from"`
+	VexDocuments                   []string           `yaml:"vex-documents" json:"vex-documents" mapstructure:"vex-documents"`
+	VexAdd                         []string           `yaml:"vex-add" json:"vex-add" mapstructure:"vex-add"`                                                                            // GRYPE_VEX_ADD
+	MatchUpstreamKernelHeaders     bool               `yaml:"match-upstream-kernel-headers" json:"match-upstream-kernel-headers" mapstructure:"match-upstream-kernel-headers"`          // Show matches on kernel-headers packages where the match is on kernel upstream instead of marking them as ignored, default=false
+	AdditionalComprehensiveDistros []string           `yaml:"additional-comprehensive-distros" json:"additional-comprehensive-distros" mapstructure:"additional-comprehensive-distros"` // treat these distros' security feeds as comprehensive: language packages owned by their OS packages are dropped before matching, default=[]
+	FixChannel                     FixChannels        `yaml:"fix-channel" json:"fix-channel" mapstructure:"fix-channel"`                                                                // the fix channels to apply to the distro when matching
+	Timestamp                      bool               `yaml:"timestamp" json:"timestamp" mapstructure:"timestamp"`
+	DatabaseCommand                `yaml:",inline" json:",inline" mapstructure:",squash"`
+  DropIgnoredMatches         bool               `yaml:"drop-ignored-matches" json:"drop-ignored-matches" mapstructure:"drop-ignored-matches"`
 }
 
 type developer struct {
@@ -98,7 +101,7 @@ func (o *Grype) AddFlags(flags clio.FlagSet) {
 
 	flags.StringVarP(&o.Distro,
 		"distro", "",
-		"distro to match against in the format: <distro>:<version>",
+		"distro to match against in the format: <distro>[-:@]<version>",
 	)
 
 	flags.BoolVarP(&o.GenerateMissingCPEs,
@@ -155,6 +158,11 @@ func (o *Grype) AddFlags(flags clio.FlagSet) {
 		"an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')",
 	)
 
+	flags.StringArrayVarP(&o.From,
+		"from", "",
+		"specify the source behavior to use (e.g. docker, registry, podman, oci-dir, ...)",
+	)
+
 	flags.StringArrayVarP(&o.VexDocuments,
 		"vex", "",
 		"a list of VEX documents to consider when producing scanning results",
@@ -162,6 +170,8 @@ func (o *Grype) AddFlags(flags clio.FlagSet) {
 }
 
 func (o *Grype) PostLoad() error {
+	o.From = flatten(o.From)
+
 	if o.FailOn != "" {
 		failOnSeverity := *o.FailOnSeverity()
 		if failOnSeverity == vulnerability.UnknownSeverity {
@@ -208,9 +218,21 @@ VEX fields apply when Grype reads vex data:
 	descriptions.Add(&o.VexAdd, `VEX statuses to consider as ignored rules`)
 	descriptions.Add(&o.MatchUpstreamKernelHeaders, `match kernel-header packages with upstream kernel as kernel vulnerabilities`)
 	descriptions.Add(&o.DropIgnoredMatches, `omit supporessed/ignored vulnerabilities in the output (e.g. json, template)`)
+	descriptions.Add(&o.AdditionalComprehensiveDistros, `distros (by ID, e.g. "amazonlinux")`)
 }
 
 func (o Grype) FailOnSeverity() *vulnerability.Severity {
 	severity := vulnerability.ParseSeverity(o.FailOn)
 	return &severity
+}
+
+// flatten takes a list of comma-separated entries and returns a flattened list of trimmed values (preserving order)
+func flatten(commaSeparatedEntries []string) []string {
+	var out []string
+	for _, v := range commaSeparatedEntries {
+		for _, s := range strings.Split(v, ",") {
+			out = append(out, strings.TrimSpace(s))
+		}
+	}
+	return out
 }
