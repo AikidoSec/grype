@@ -191,7 +191,7 @@ func distroFeedIsComprehensive(dst *distro.Distro, additionalComprehensiveDistro
 	if dst.Type == distro.AmazonLinux {
 		// AmazonLinux shows "like rhel" but is not an rhel clone
 		// and does not have an exhaustive vulnerability feed.
-		return false
+		return true
 	}
 	for _, d := range comprehensiveDistros {
 		if strings.EqualFold(string(d), dst.Name()) {

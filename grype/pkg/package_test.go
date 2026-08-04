@@ -1132,11 +1132,11 @@ func Test_RemovePackagesByOverlap(t *testing.T) {
 			expectedPackages: []string{"rpm:python3-rpm@4.14.3-26.el8"},
 		},
 		{
-			name: "amzn linux doesn't remove packages in this way",
+			name: "amzn linux removes overlapping packages by default",
 			sbom: withLinuxRelease(catalogWithOverlaps(
 				[]string{"rpm:python3-rpm@4.14.3-26.el8", "python:rpm@4.14.3"},
 				[]string{"rpm:python3-rpm@4.14.3-26.el8 -> python:rpm@4.14.3"}), "amzn"),
-			expectedPackages: []string{"rpm:python3-rpm@4.14.3-26.el8", "python:rpm@4.14.3"},
+			expectedPackages: []string{"rpm:python3-rpm@4.14.3-26.el8"},
 		},
 		{
 			name: "amzn linux removes overlapping packages when configured as an additional comprehensive distro",
@@ -1155,12 +1155,12 @@ func Test_RemovePackagesByOverlap(t *testing.T) {
 			expectedPackages:               []string{"rpm:some-agent@7.81.2-1", "python:urllib3@2.7.0"},
 		},
 		{
-			name: "additional comprehensive distro override for unrelated distro has no effect",
+			name: "additional comprehensive distro override for unrelated distro does not disable the amzn default",
 			sbom: withLinuxRelease(catalogWithOverlaps(
 				[]string{"rpm:python3-rpm@4.14.3-26.el8", "python:rpm@4.14.3"},
 				[]string{"rpm:python3-rpm@4.14.3-26.el8 -> python:rpm@4.14.3"}), "amzn"),
 			additionalComprehensiveDistros: []string{"gentoo"},
-			expectedPackages:               []string{"rpm:python3-rpm@4.14.3-26.el8", "python:rpm@4.14.3"},
+			expectedPackages:               []string{"rpm:python3-rpm@4.14.3-26.el8"},
 		},
 		{
 			name: "remove overlapping package when parent version is prefix of child version",
