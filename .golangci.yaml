@@ -37,6 +37,12 @@ linters:
       - common-false-positives
       - legacy
       - std-error-handling
+    rules:
+      # packages like log, format, version and template are long-standing upstream names, renaming
+      # them would churn every import for no benefit
+      - linters:
+          - revive
+        text: "avoid package names that conflict with Go standard library"
     paths:
       - third_party$
       - builtin$
