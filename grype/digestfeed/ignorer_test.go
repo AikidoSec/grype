@@ -70,8 +70,14 @@ func TestApply(t *testing.T) {
 			wantCleared: false,
 		},
 		{
-			name:        "non binary package stands",
+			// go deps come from the parent binary's buildinfo, so they share its path and hash
+			name:        "dependency of a cleared binary is ignored",
 			match:       testMatch(syftPkg.GoModulePkg, "/usr/bin/minio", "CVE-2025-62506"),
+			wantCleared: true,
+		},
+		{
+			name:        "dependency at an unrelated path stands",
+			match:       testMatch(syftPkg.GoModulePkg, "/app/vendor/main", "CVE-2025-62506"),
 			wantCleared: false,
 		},
 	}

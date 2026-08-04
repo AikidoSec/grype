@@ -7,7 +7,6 @@ import (
 	"github.com/anchore/grype/grype/match"
 	"github.com/anchore/grype/grype/pkg"
 	"github.com/anchore/syft/syft/file"
-	syftPkg "github.com/anchore/syft/syft/pkg"
 	"github.com/anchore/syft/syft/sbom"
 )
 
@@ -68,12 +67,10 @@ func (ig *Ignorer) Apply(matches *match.Matches, ignored []match.IgnoredMatch) (
 }
 
 // clearedBy returns the content hash and the vulnerability ID that cleared the match, or empty
-// strings when the match stands.
+// strings when the match stands. Package type is deliberately not considered: a dependency compiled
+// into a patched binary is reported under its own type (go-module, from the ELF buildinfo) while
+// living at the parent binary's path, and it is the file hash that was patched, not the package.
 func (ig *Ignorer) clearedBy(m match.Match) (sha, vulnID string) {
-	if m.Package.Type != syftPkg.BinaryPkg {
-		return "", ""
-	}
-
 	sha = ig.sha256For(m.Package)
 	if sha == "" {
 		return "", ""

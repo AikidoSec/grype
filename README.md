@@ -509,7 +509,7 @@ The source may be an `http`/`https` URL or a local file path, and points at a JS
 ]
 ```
 
-A match is cleared when the package is a binary, one of its file locations has a sha256 in the feed, and the feed lists the match's vulnerability for that hash. Cleared matches are treated as [ignored](#specifying-matches-to-ignore): they move to `ignoredMatches` with the clearing hash as the reason, and they do not affect `--fail-on`.
+A match is cleared when one of the package's file locations has a sha256 in the feed and the feed lists the match's vulnerability for that hash. Package type is not considered, so a dependency compiled into a patched binary is cleared too: those are reported under their own type (a Go module read from the binary's buildinfo, for example) while living at the parent binary's path, and it is that file which was patched. Cleared matches are treated as [ignored](#specifying-matches-to-ignore): they move to `ignoredMatches` with the clearing hash as the reason, and they do not affect `--fail-on`.
 
 Downloaded feeds are cached next to the vulnerability database and reused for `digest-feed.ttl` (default one hour). If the feed cannot be fetched, Grype falls back to a stale cache, and otherwise logs a warning and scans without clearance rather than failing.
 
