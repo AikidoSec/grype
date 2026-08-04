@@ -486,10 +486,13 @@ If you want Grype to only report vulnerabilities **that do not have a confirmed 
 
 ### Clearing matches with a content hash feed
 
-Prebuilt binaries (minio, node, and similar) are matched by CPE and version string. When such a binary is patched in place, the version string stays the same and only the file bytes change, so Grype keeps reporting a vulnerability that is already fixed. The `digest-feed` option lets you supply a list of file content hashes and the CVEs each hash is patched against, so those matches can be cleared by hash instead of by version:
+Prebuilt binaries (minio, node, and similar) are matched by CPE and version string. When such a binary is patched in place, the version string stays the same and only the file bytes change, so Grype keeps reporting a vulnerability that is already fixed. Grype therefore consults a feed of file content hashes and the CVEs each hash is patched against, and clears those matches by hash instead of by version.
+
+This is on by default using `https://api.root.io/external/binary_feed`. Point `--digest-feed` at another feed, or set it to an empty value to turn the behavior off:
 
 ```shell
-grype sbom:image.json --digest-feed https://api.root.io/external/binary_feed
+grype sbom:image.json --digest-feed ./my-feed.json   # use a different feed
+grype sbom:image.json --digest-feed ''               # disable
 ```
 
 The source may be an `http`/`https` URL or a local file path, and points at a JSON array of:
@@ -510,7 +513,7 @@ A match is cleared when the package is a binary, one of its file locations has a
 
 Downloaded feeds are cached next to the vulnerability database and reused for `digest-feed.ttl` (default one hour). If the feed cannot be fetched, Grype falls back to a stale cache, and otherwise logs a warning and scans without clearance rather than failing.
 
-This relies on file digests being present in the input, which is the case for Syft SBOMs containing a `files[]` section with sha256 digests. Scanning an image or directory directly does not catalog file digests, so the feed has no effect there.
+This relies on file digests being present in the input, which is the case for Syft SBOMs containing a `files[]` section with sha256 digests. Scanning an image or directory directly does not catalog file digests, so the feed is skipped entirely for those inputs and no request is made.
 
 ## VEX Support
 
@@ -1022,8 +1025,8 @@ dev:
 
 digest-feed:
   # URL or file path of a feed listing file content hashes and the CVEs they are patched against,
-  # used to clear matches on binaries that were patched without a version bump (default is unset, which disables this) (env: GRYPE_DIGEST_FEED_SOURCE)
-  source: ''
+  # used to clear matches on binaries that were patched without a version bump (set to an empty value to disable) (env: GRYPE_DIGEST_FEED_SOURCE)
+  source: 'https://api.root.io/external/binary_feed'
 
   # how long a downloaded digest feed is reused before being fetched again (env: GRYPE_DIGEST_FEED_TTL)
   ttl: 1h0m0s

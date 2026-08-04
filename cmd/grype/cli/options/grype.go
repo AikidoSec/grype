@@ -165,7 +165,7 @@ func (o *Grype) AddFlags(flags clio.FlagSet) {
 
 	flags.StringVarP(&o.DigestFeed.Source,
 		"digest-feed", "",
-		"URL or file path of a feed of file content hashes and the CVEs they are patched against",
+		"URL or file path of a feed of file content hashes and the CVEs they are patched against (set empty to disable)",
 	)
 }
 

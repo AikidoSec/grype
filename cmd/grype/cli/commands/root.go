@@ -268,6 +268,13 @@ func digestIgnorer(opts *options.Grype, s *sbom.SBOM) *digestfeed.Ignorer {
 		return nil
 	}
 
+	// inputs without file digests (images, directories) cannot be cleared, so skip the fetch
+	digests := digestfeed.DigestsByPath(s)
+	if len(digests) == 0 {
+		log.Debug("no file digests in the input, skipping the digest feed")
+		return nil
+	}
+
 	// the feed cache lives alongside the vulnerability DB, under the same configurable cache root
 	index, err := digestfeed.Load(opts.DigestFeed.Source, filepath.Dir(opts.DB.Dir), opts.DigestFeed.TTL)
 	if err != nil {
@@ -277,7 +284,7 @@ func digestIgnorer(opts *options.Grype, s *sbom.SBOM) *digestfeed.Ignorer {
 
 	log.WithFields("hashes", len(index)).Debug("loaded digest feed")
 
-	return digestfeed.NewIgnorer(index, digestfeed.DigestsByPath(s))
+	return digestfeed.NewIgnorer(index, digests)
 }
 
 func warnWhenDistroHintNeeded(pkgs []pkg.Package, context *pkg.Context) {
