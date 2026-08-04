@@ -223,6 +223,7 @@ func runGrype(app clio.Application, opts *options.Grype, userInput string) (errs
 		FailSeverity:          opts.FailOnSeverity(),
 		Matchers:              getMatchers(opts),
 		VexProcessor:          vexProcessor,
+		DropIgnoredMatches:    opts.DropIgnoredMatches,
 	}
 
 	remainingMatches, ignoredMatches, err := vulnMatcher.FindMatches(packages, pkgContext)
