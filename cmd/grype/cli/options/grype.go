@@ -151,6 +151,11 @@ func (o *Grype) AddFlags(flags clio.FlagSet) {
 		"exclude paths from being scanned using a glob expression",
 	)
 
+	flags.StringArrayVarP(&o.AdditionalComprehensiveDistros,
+		"additional-comprehensive-distros", "",
+		"distros (by ID, e.g. 'amazonlinux') to treat as comprehensive: language packages owned by their OS packages are dropped before matching",
+	)
+
 	flags.StringVarP(&o.Platform,
 		"platform", "",
 		"an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')",
