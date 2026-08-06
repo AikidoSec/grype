@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/anchore/clio"
 	"github.com/anchore/grype/cmd/grype/cli/options"
 	"github.com/anchore/grype/grype"
+	"github.com/anchore/grype/grype/digestfeed"
 	"github.com/anchore/grype/grype/distro"
 	"github.com/anchore/grype/grype/event"
 	"github.com/anchore/grype/grype/event/parsers"
@@ -223,6 +225,7 @@ func runGrype(app clio.Application, opts *options.Grype, userInput string) (errs
 		FailSeverity:          opts.FailOnSeverity(),
 		Matchers:              getMatchers(opts),
 		VexProcessor:          vexProcessor,
+		DigestIgnorer:         digestIgnorer(opts, s),
 	}
 
 	remainingMatches, ignoredMatches, err := vulnMatcher.FindMatches(packages, pkgContext)
@@ -256,6 +259,32 @@ func runGrype(app clio.Application, opts *options.Grype, userInput string) (errs
 	log.WithFields("time", time.Since(startTime)).Trace("wrote vulnerability report")
 
 	return errs
+}
+
+// digestIgnorer returns nil when the feature is off or the feed is unreachable: an unavailable
+// feed should cost clearance, not the whole scan.
+func digestIgnorer(opts *options.Grype, s *sbom.SBOM) *digestfeed.Ignorer {
+	if opts.DigestFeed.Source == "" {
+		return nil
+	}
+
+	// inputs without file digests (images, directories) cannot be cleared, so skip the fetch
+	digests := digestfeed.DigestsByPath(s)
+	if len(digests) == 0 {
+		log.Debug("no file digests in the input, skipping the digest feed")
+		return nil
+	}
+
+	// the feed cache lives alongside the vulnerability DB, under the same configurable cache root
+	index, err := digestfeed.Load(opts.DigestFeed.Source, filepath.Dir(opts.DB.Dir), opts.DigestFeed.TTL)
+	if err != nil {
+		log.WithFields("error", err).Warn("digest feed unavailable, continuing without it")
+		return nil
+	}
+
+	log.WithFields("hashes", len(index)).Debug("loaded digest feed")
+
+	return digestfeed.NewIgnorer(index, digests)
 }
 
 func warnWhenDistroHintNeeded(pkgs []pkg.Package, context *pkg.Context) {

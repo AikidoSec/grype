@@ -41,6 +41,7 @@ type Grype struct {
 	MatchUpstreamKernelHeaders     bool               `yaml:"match-upstream-kernel-headers" json:"match-upstream-kernel-headers" mapstructure:"match-upstream-kernel-headers"`          // Show matches on kernel-headers packages where the match is on kernel upstream instead of marking them as ignored, default=false
 	AdditionalComprehensiveDistros []string           `yaml:"additional-comprehensive-distros" json:"additional-comprehensive-distros" mapstructure:"additional-comprehensive-distros"` // treat these distros' security feeds as comprehensive: language packages owned by their OS packages are dropped before matching, default=[]
 	FixChannel                     FixChannels        `yaml:"fix-channel" json:"fix-channel" mapstructure:"fix-channel"`                                                                // the fix channels to apply to the distro when matching
+	DigestFeed                     digestFeed         `yaml:"digest-feed" json:"digest-feed" mapstructure:"digest-feed"`                                                                // GRYPE_DIGEST_FEED_SOURCE, clears matches by file content hash
 	Timestamp                      bool               `yaml:"timestamp" json:"timestamp" mapstructure:"timestamp"`
 	DatabaseCommand                `yaml:",inline" json:",inline" mapstructure:",squash"`
 }
@@ -68,6 +69,7 @@ func DefaultGrype(id clio.Identification) *Grype {
 		},
 		Match:                      defaultMatchConfig(),
 		ExternalSources:            defaultExternalSources(),
+		DigestFeed:                 defaultDigestFeed(),
 		CheckForAppUpdate:          true,
 		VexAdd:                     []string{},
 		MatchUpstreamKernelHeaders: false,
@@ -160,6 +162,11 @@ func (o *Grype) AddFlags(flags clio.FlagSet) {
 	flags.StringArrayVarP(&o.VexDocuments,
 		"vex", "",
 		"a list of VEX documents to consider when producing scanning results",
+	)
+
+	flags.StringVarP(&o.DigestFeed.Source,
+		"digest-feed", "",
+		"URL or file path of a feed of file content hashes and the CVEs they are patched against (set empty to disable)",
 	)
 }
 
