@@ -38,7 +38,7 @@ func syftSBOMProvider(userInput string, config ProviderConfig, applyChannel func
 
 	d := distroFromSBOM(s, config, applyChannel)
 
-	catalog := removePackagesByOverlap(s.Artifacts.Packages, s.Relationships, d)
+	catalog := removePackagesByOverlap(s.Artifacts.Packages, s.Relationships, d, config.AdditionalComprehensiveDistros...)
 
 	var enhancers []Enhancer
 	if fmtID != syftjson.ID {
